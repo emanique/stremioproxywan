@@ -10,7 +10,8 @@ DEFAULTS={
  'wan_cert':'/etc/stremioproxywan/tls/fullchain.pem',
  'wan_key':'/etc/stremioproxywan/tls/privkey.pem',
  'lan_host':'lan.example.invalid','lan_http_port':8080,'lan_core_port':11470,
- 'backend_scheme':'https','backend_host':'backend.example.invalid',
+ 'backend_scheme':'https','backend_identity_mode':'stremio_auto',
+ 'backend_host':'backend.example.invalid',
  'backend_port':12470,'backend_tls_name':'backend.example.invalid',
  'backend_ca':'/etc/ssl/certs/ca-certificates.crt','http_policy':'disabled'
 }
@@ -35,15 +36,21 @@ def validate(raw):
   try: ipaddress.IPv4Address(d['wan_host'])
   except ipaddress.AddressValueError as exc: raise ValueError('direct_ip requires WAN IPv4') from exc
  if d['backend_scheme'] not in ('http','https'): raise ValueError('Invalid backend scheme')
+ if d['backend_identity_mode'] not in ('stremio_auto','manual'): raise ValueError('Invalid backend identity mode')
+ if d['backend_identity_mode']=='stremio_auto' and d['backend_scheme']!='https':
+  raise ValueError('stremio_auto requires HTTPS backend')
  if d['http_policy'] not in ('disabled','redirect','legacy_proxy'): raise ValueError('Invalid HTTP policy')
  return d
 def require_deployment_values(d):
     if d['wan_host'].endswith('.example.com') or d['wan_host'].endswith('.invalid'):
         raise ValueError('Configure an actual WAN hostname or IP')
-    if d['lan_host'].endswith('.invalid') or d['backend_host'].endswith('.invalid'):
-        raise ValueError('Configure the LAN and backend addresses')
-    if d['backend_scheme']=='https' and d['backend_tls_name'].endswith('.invalid'):
-        raise ValueError('Configure the backend TLS hostname')
+    if d['lan_host'].endswith('.invalid'):
+        raise ValueError('Configure the Stremio LAN address or stable LAN hostname')
+    if d['backend_identity_mode']=='manual':
+        if d['backend_host'].endswith('.invalid'):
+            raise ValueError('Configure the backend address')
+        if d['backend_scheme']=='https' and d['backend_tls_name'].endswith('.invalid'):
+            raise ValueError('Configure the backend TLS hostname')
 
 def nginx_config(raw):
  d=validate(raw)
