@@ -86,7 +86,7 @@ map "$uri|$args" $stremio_hls_media_args {{
  ssl_certificate_key {d['wan_key']};
  ssl_protocols TLSv1.2 TLSv1.3;
  # Shared activation link: single bearer secret, no URL access logging.
- location ~ ^/activate/[A-Za-z0-9_-]{{43}}$ {{
+ location ~ "^/activate/[A-Za-z0-9_-]{{43}}$" {{
   auth_basic off;
   access_log off;
   add_header Referrer-Policy "no-referrer" always;
