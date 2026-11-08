@@ -16,6 +16,14 @@ class ConfigTest(unittest.TestCase):
         self.assertIn('http%3A%2F%2F10.20.30.40%3A11500',result)
         self.assertIn('proxy_pass https://backend.example.org:12500;',result)
         self.assertIn('return 301 https://media.example.org:8443',result)
+    def test_legacy_login_redirects_to_session_entry_without_http_listener(self):
+        config=nginx_config({**DEFAULTS,'wan_host':'str.lusosolutions.com','http_policy':'disabled'})
+        self.assertIn('location = /login { return 302 /_session/start; }',config)
+        self.assertIn('location = /_session/start {',config)
+        self.assertIn('auth_basic "Stremio - acesso restrito";',config)
+        self.assertNotIn('listen 80;',config)
+        self.assertNotIn('location /login { proxy_pass',config)
+
     def test_legacy_http_opt_in(self):
         self.assertIn('proxy_pass http://lan.example.invalid:8080;',nginx_config({**DEFAULTS,'http_policy':'legacy_proxy'}))
     def test_invalid_host_rejected(self):
