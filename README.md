@@ -213,3 +213,17 @@ manual Addons installation instructions. It no longer opens the native
 \`Page not found\` screen. A valid addon manifest is separate from the
 custom streaming-server address; the addon cannot authenticate that Core
 connection and never claims to do so.
+
+### Account addon functional diagnostic catalog (0.1.7)
+
+The private account addon now advertises `catalog`, `meta`, and `stream`
+resources. A single movie-type diagnostic item, **StremioProxyWAN - Conta
+autorizada**, is shown in its own catalog for a client holding an
+approved, revocable manifest capability. Its metadata explicitly states
+that this proves only addon access. Its stream response is intentionally
+empty: an addon capability is not automatically a Core authorization,
+and no broad Core endpoint or video URL is exposed by this version.
+
+The account's existing manifest URL remains valid across this upgrade.
+Clients that cache the old manifest may need an addon refresh to see the
+new catalog resource; no token rotation is required.

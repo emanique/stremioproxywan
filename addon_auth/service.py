@@ -97,15 +97,29 @@ def verify(token):
         account = state["capabilities"].get(digest)
         return bool(account and state["accounts"].get(account) is True)
 
+DIAGNOSTIC_ID = "proxywan:connection"
+DIAGNOSTIC = {
+    "id": DIAGNOSTIC_ID,
+    "type": "movie",
+    "name": "StremioProxyWAN - Conta autorizada",
+    "description": "O cliente conseguiu consultar o addon privado. Isto nao significa que o servidor de streaming esta autenticado.",
+}
+
+def diagnostic_catalog():
+    return {"metas": [{key: DIAGNOSTIC[key] for key in ("id", "type", "name")}]}
+
+def diagnostic_meta():
+    return {"meta": DIAGNOSTIC.copy()}
+
 def manifest():
     return {
         "id": "com.lusosolutions.stremioproxywan.account",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "name": "StremioProxyWAN Account",
-        "description": "Private account-bound access; does not override streaming-server authentication",
-        "resources": ["catalog"],
+        "description": "Account-authorized diagnostic catalog; Stremio Core access remains separately protected",
+        "resources": ["catalog", "meta", "stream"],
         "types": ["movie"],
-        "catalogs": [{"type": "movie", "id": "proxywan-account"}],
+        "catalogs": [{"type": "movie", "id": "proxywan-account", "name": "StremioProxyWAN"}],
         "behaviorHints": {"configurable": False},
     }
 
@@ -169,12 +183,21 @@ document.getElementById('pair').onclick=async()=>{
 };
 </script></body></html>"""
             return self.reply(200, html, "text/html; charset=utf-8")
-        m = re.fullmatch(r"/([A-Za-z0-9_-]{43})/(manifest\.json|catalog/movie/proxywan-account\.json)", self.path)
+        m = re.fullmatch(
+            r"/([A-Za-z0-9_-]{43})/(manifest\.json|catalog/movie/proxywan-account\.json"
+            r"|meta/movie/proxywan:connection\.json|stream/movie/proxywan:connection\.json)",
+            self.path,
+        )
         if not m or not verify(m[1]):
             return self.reply(404)
-        if m[2] == "manifest.json":
+        resource = m[2]
+        if resource == "manifest.json":
             return self.reply(200, manifest())
-        return self.reply(200, {"metas": []})
+        if resource.startswith("catalog/"):
+            return self.reply(200, diagnostic_catalog())
+        if resource.startswith("meta/"):
+            return self.reply(200, diagnostic_meta())
+        return self.reply(200, {"streams": []})
 
 if __name__ == "__main__":
     http.server.ThreadingHTTPServer(("127.0.0.1", 18766), Handler).serve_forever()

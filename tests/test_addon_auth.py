@@ -45,7 +45,10 @@ class AccountAddonTests(unittest.TestCase):
 
     def test_manifest_protocol(self):
         item = service.manifest()
-        self.assertEqual(item["resources"], ["catalog"])
+        self.assertEqual(item["resources"], ["catalog", "meta", "stream"])
+        self.assertEqual(service.diagnostic_catalog()["metas"][0]["id"], service.DIAGNOSTIC_ID)
+        self.assertEqual(service.diagnostic_meta()["meta"]["id"], service.DIAGNOSTIC_ID)
+        self.assertNotIn("url", service.diagnostic_meta()["meta"])
         self.assertEqual(item["catalogs"][0]["id"], "proxywan-account")
 
     def test_stremio_invalid_json_response(self):
