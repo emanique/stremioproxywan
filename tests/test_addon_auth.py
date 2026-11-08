@@ -45,7 +45,12 @@ class AccountAddonTests(unittest.TestCase):
 
     def test_manifest_protocol(self):
         item = service.manifest()
-        self.assertEqual(item["resources"], ["catalog", "meta", "stream"])
+        self.assertEqual(item["resources"][0], "catalog")
+        self.assertEqual(item["idPrefixes"], ["proxywan:"])
+        for resource in item["resources"][1:]:
+            self.assertEqual(resource["idPrefixes"], ["proxywan:"])
+            self.assertEqual(resource["types"], ["movie"])
+        self.assertEqual({r["name"] for r in item["resources"][1:]}, {"meta", "stream"})
         self.assertEqual(service.diagnostic_catalog()["metas"][0]["id"], service.DIAGNOSTIC_ID)
         self.assertEqual(service.diagnostic_meta()["meta"]["id"], service.DIAGNOSTIC_ID)
         self.assertNotIn("url", service.diagnostic_meta()["meta"])

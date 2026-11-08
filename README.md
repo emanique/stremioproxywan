@@ -227,3 +227,7 @@ and no broad Core endpoint or video URL is exposed by this version.
 The account's existing manifest URL remains valid across this upgrade.
 Clients that cache the old manifest may need an addon refresh to see the
 new catalog resource; no token rotation is required.
+
+### Stremio Windows meta resolution (0.1.8)
+
+The manifest declares idPrefixes = ["proxywan:"] globally and explicitly for both meta and stream resources. Clients can select this addon for the diagnostic catalog item proxywan:connection. No Core authentication or video stream access is changed. Existing private manifest URLs remain valid. Refresh addon metadata if the client has cached manifest 0.2.0.

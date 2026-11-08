@@ -114,11 +114,16 @@ def diagnostic_meta():
 def manifest():
     return {
         "id": "com.lusosolutions.stremioproxywan.account",
-        "version": "0.2.0",
+        "version": "0.2.1",
         "name": "StremioProxyWAN Account",
         "description": "Account-authorized diagnostic catalog; Stremio Core access remains separately protected",
-        "resources": ["catalog", "meta", "stream"],
+        "resources": [
+            "catalog",
+            {"name": "meta", "types": ["movie"], "idPrefixes": ["proxywan:"]},
+            {"name": "stream", "types": ["movie"], "idPrefixes": ["proxywan:"]},
+        ],
         "types": ["movie"],
+        "idPrefixes": ["proxywan:"],
         "catalogs": [{"type": "movie", "id": "proxywan-account", "name": "StremioProxyWAN"}],
         "behaviorHints": {"configurable": False},
     }
