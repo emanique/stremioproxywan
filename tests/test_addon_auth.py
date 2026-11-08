@@ -52,6 +52,39 @@ class AccountAddonTests(unittest.TestCase):
         self.assertIn('proxy_set_header X-Core-Capability $core_cap', conf)
         self.assertIn('access_log off', conf.split('location ~ "^/_core/')[1].split('location = /login')[0])
 
+    def test_media_catalog_filters_incomplete_or_invalid(self):
+        class Response:
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, size):
+                return json.dumps([
+                    {"infoHash": "a"*40, "name": "Finished", "progress": 1.0},
+                    {"infoHash": "b"*40, "name": "Incomplete", "progress": .9},
+                    {"infoHash": "../bad", "name": "Invalid", "progress": 1.0},
+                    {"infoHash": "c"*40, "name": "", "progress": 1.0},
+                ]).encode()
+        found=service.completed_media(transport=lambda *args, **kwargs: Response())
+        self.assertEqual(set(found), {"a"*40})
+        self.assertEqual(service.media_hash("proxywan:"+"a"*40), "a"*40)
+        self.assertIsNone(service.media_hash("proxywan:../bad"))
+
+    def test_media_stream_requires_completed_content(self):
+        service.authorize_account("user-1")
+        token=service.grant("user-1")
+        ih="a"*40
+        with patch.object(service, "completed_media", return_value={}):
+            self.assertEqual(service.media_stream(token,ih), {"streams":[]})
+        with patch.object(service, "completed_media", return_value={ih:{"id":"proxywan:"+ih}}):
+            output=service.media_stream(token,ih)
+            self.assertEqual(len(output["streams"]),1)
+            self.assertTrue(output["streams"][0]["url"].endswith("/"+ih+"/-1"))
+        conf=nginx_config(DEFAULTS)
+        self.assertIn('location = /_media/check', conf)
+        self.assertIn('auth_request /_media/check', conf)
+        self.assertIn('proxy_set_header Range $http_range', conf)
+        self.assertIn('access_log off', conf.split('location ~ "^/_media/')[1].split('location = /_core/check')[0])
+        self.assertNotIn('proxy_pass http://127.0.0.1:11470;', conf)
+
     def test_manifest_protocol(self):
         item = service.manifest()
         self.assertEqual(item["resources"][0], "catalog")

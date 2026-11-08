@@ -22,6 +22,9 @@ LOCK = threading.RLock()
 CAPABILITY_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 ACCOUNT_RE = re.compile(r"^[A-Za-z0-9_.@:-]{1,256}$")
 MAX_BODY = 8192
+ACTIVE_URL = "http://192.168.1.234:11470/active.json"
+MEDIA_ID_RE = re.compile(r"^proxywan:([0-9a-f]{40})$")
+
 
 def load():
     try:
@@ -105,6 +108,53 @@ DIAGNOSTIC = {
     "description": "O cliente conseguiu consultar o addon privado. Isto nao significa que o servidor de streaming esta autenticado.",
 }
 
+def completed_media(transport=None):
+    """List already loaded, completed media; no filesystem, magnet or URL input from users."""
+    transport = transport or urllib.request.urlopen
+    try:
+        with transport(ACTIVE_URL, timeout=4) as response:
+            obj = json.loads(response.read(524288))
+    except (OSError, ValueError, urllib.error.URLError, TimeoutError):
+        return {}
+    if not isinstance(obj, list):
+        return {}
+    items = {}
+    for item in obj[:256]:
+        if not isinstance(item, dict):
+            continue
+        ih = str(item.get("infoHash") or "").lower()
+        if not re.fullmatch(r"[0-9a-f]{40}", ih):
+            continue
+        if item.get("progress") != 1.0:
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        items[ih] = {"id": "proxywan:" + ih, "type": "movie",
+                     "name": name[:180],
+                     "description": "Video concluido no servidor privado."}
+    return items
+
+def media_hash(media_id):
+    match = MEDIA_ID_RE.fullmatch(media_id)
+    return match.group(1) if match else None
+
+def media_catalog():
+    return {"metas": diagnostic_catalog()["metas"] + [
+        {key: item[key] for key in ("id", "type", "name")}
+        for item in completed_media().values()
+    ]}
+
+def media_meta(infohash):
+    return {"meta": completed_media().get(infohash, {})}
+
+def media_stream(token, infohash):
+    if infohash not in completed_media():
+        return {"streams": []}
+    return {"streams": [{"name": "StremioProxyWAN - Biblioteca",
+                         "title": "Reproducao HTTPS privada",
+                         "url": f"https://{HOSTNAME}/_media/{token}/{infohash}/-1"}]}
+
 def diagnostic_catalog():
     return {"metas": [{key: DIAGNOSTIC[key] for key in ("id", "type", "name")}]}
 
@@ -114,9 +164,9 @@ def diagnostic_meta():
 def manifest():
     return {
         "id": "com.lusosolutions.stremioproxywan.account",
-        "version": "0.2.1",
+        "version": "0.3.0",
         "name": "StremioProxyWAN Account",
-        "description": "Account-authorized diagnostic catalog; Stremio Core access remains separately protected",
+        "description": "Authorized private catalog and streamed media; Core API remains protected",
         "resources": [
             "catalog",
             {"name": "meta", "types": ["movie"], "idPrefixes": ["proxywan:"]},
@@ -170,6 +220,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path == "/check-core":
             capability = self.headers.get("X-Core-Capability", "")
             return self.reply(204 if verify(capability) else 401)
+        if self.path == "/check-media":
+            capability = self.headers.get("X-Media-Capability", "")
+            infohash = self.headers.get("X-Media-Infohash", "")
+            permitted = (verify(capability) and
+                         re.fullmatch(r"[0-9a-f]{40}", infohash) is not None and
+                         infohash in completed_media())
+            return self.reply(204 if permitted else 401)
         if self.path == "/configure":
             html = """<!doctype html><html lang="pt"><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>StremioProxyWAN Account</title><body><h1>Associar conta Stremio</h1><p>Inicie sessão no WebPlayer deste domínio, depois use esta página. Apenas contas autorizadas podem associar o addon.</p><button id="pair">Associar conta actual</button><button id="corelink">Gerar endereco experimental de servidor</button><p id="msg"></p><script>
 document.getElementById('corelink').onclick=async()=>{
@@ -211,19 +268,21 @@ document.getElementById('pair').onclick=async()=>{
             return self.reply(200, html, "text/html; charset=utf-8")
         m = re.fullmatch(
             r"/([A-Za-z0-9_-]{43})/(manifest\.json|catalog/movie/proxywan-account\.json"
-            r"|meta/movie/proxywan:connection\.json|stream/movie/proxywan:connection\.json)",
+            r"|(?:meta|stream)/movie/proxywan:(?:connection|[0-9a-f]{40})\.json)",
             self.path,
         )
         if not m or not verify(m[1]):
             return self.reply(404)
-        resource = m[2]
+        token, resource = m.groups()
         if resource == "manifest.json":
             return self.reply(200, manifest())
         if resource.startswith("catalog/"):
-            return self.reply(200, diagnostic_catalog())
+            return self.reply(200, media_catalog())
         if resource.startswith("meta/"):
-            return self.reply(200, diagnostic_meta())
-        return self.reply(200, {"streams": []})
+            ih = media_hash(resource[len("meta/movie/"):-len(".json")])
+            return self.reply(200, media_meta(ih) if ih else diagnostic_meta())
+        ih = media_hash(resource[len("stream/movie/"):-len(".json")])
+        return self.reply(200, media_stream(token, ih) if ih else {"streams": []})
 
 if __name__ == "__main__":
     http.server.ThreadingHTTPServer(("127.0.0.1", 18766), Handler).serve_forever()

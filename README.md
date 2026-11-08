@@ -251,3 +251,15 @@ revocable capability for the validated account; it does NOT change the
 installed addon manifest. Only the four read-only handshake endpoints
 are authorized. Do not use it for playback or expect arbitrary Core
 requests to succeed. This is strictly an interoperability probe.
+
+### Private completed-media playback (0.2.0)
+
+The addon now lists completed torrents already loaded by the internal Core
+(active.json, fixed LAN address), and exposes their metadata and a private
+HTTPS media URL. No magnet creation, tracker input, arbitrary file indices,
+or external destination URLs are accepted. Nginx validates the addon
+capability and completed torrent hash on every /_media/ request via an
+internal loopback auth_request. Byte-range responses are proxied from the
+existing Stremio Core with TLS validation. The original browser session
+path and the principal Streaming Server URL remain authenticated. This is
+a narrow pilot: TV/HLS and remote native playback are not yet validated.

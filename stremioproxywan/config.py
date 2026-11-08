@@ -124,7 +124,7 @@ map "$uri|$args" $stremio_hls_media_args {{
   proxy_set_header Authorization "";
   proxy_set_header Cookie "";
  }}
- location ~ "^/_addon/[A-Za-z0-9_-]{{43}}/(manifest\\.json|catalog/movie/proxywan-account\\.json|meta/movie/proxywan:connection\\.json|stream/movie/proxywan:connection\\.json)$" {{
+ location ~ "^/_addon/[A-Za-z0-9_-]{{43}}/(manifest\\.json|catalog/movie/proxywan-account\\.json|(?:meta|stream)/movie/proxywan:(?:connection|[0-9a-f]{{40}})\\.json)$" {{
   auth_basic off;
   access_log off;
   # Per Stremio addon HTTP protocol: CORS is mandatory on public manifest/resources.
@@ -140,6 +140,36 @@ map "$uri|$args" $stremio_hls_media_args {{
  }}
  # Core handshake pilot. Requests remain credentialed and only read-only informational
  # routes are exposed: no torrent control, library operations or media fetch.
+ # Private addon media playback; checked on every request, including byte ranges.
+ location = /_media/check {{
+  internal;
+  proxy_pass http://127.0.0.1:18766/check-media;
+  proxy_pass_request_body off;
+  proxy_set_header Content-Length "";
+  proxy_set_header X-Media-Capability $media_cap;
+  proxy_set_header X-Media-Infohash $media_hash;
+  proxy_set_header Authorization "";
+  proxy_set_header Cookie "";
+ }}
+ location ~ "^/_media/(?<media_cap>[A-Za-z0-9_-]{{43}})/(?<media_hash>[0-9a-f]{{40}})/-1$" {{
+  auth_basic off;
+  access_log off;
+  auth_request /_media/check;
+  limit_except GET {{ deny all; }}
+  add_header Access-Control-Allow-Origin "*" always;
+  add_header Access-Control-Expose-Headers "Content-Length, Content-Range, Accept-Ranges" always;
+  add_header Cache-Control "no-store" always;
+  add_header Referrer-Policy "no-referrer" always;
+  rewrite ^ /$media_hash/-1 break;
+  proxy_pass {d['backend_scheme']}://{b}:{d['backend_port']};
+{tls}  proxy_set_header Host {d['backend_tls_name'] if d['backend_scheme']=='https' else b};
+  proxy_set_header Authorization "";
+  proxy_set_header Cookie "";
+  proxy_set_header Range $http_range;
+  proxy_set_header If-Range $http_if_range;
+  proxy_buffering off;
+  proxy_read_timeout 3600s;
+ }}
  location = /_core/check {{
   internal;
   proxy_pass http://127.0.0.1:18766/check-core;
