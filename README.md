@@ -1,6 +1,6 @@
 # StremioProxyWAN
 
-**Distribuição genérica v0.1.1** para Debian/Ubuntu. Nginx reverse proxy para Stremio WebPlayer, com autenticação WAN, sessão assinada para HLS e domínios/IP WAN e LAN totalmente configuráveis.
+**Distribuição genérica v0.1.2** para Debian/Ubuntu. Nginx reverse proxy para Stremio WebPlayer, com autenticação WAN, sessão assinada para HLS e domínios/IP WAN e LAN totalmente configuráveis.
 
 ## Arquitectura
 
@@ -14,7 +14,7 @@ O pacote não altera a VPN, o Pi-hole, o Stremio, o DNS público, o NAT nem a fi
 ## Instalação
 
 ~~~bash
-sudo apt install ./stremioproxywan_0.1.1_all.deb
+sudo apt install ./stremioproxywan_0.1.2_all.deb
 sudo stremioproxywan configure \
  --set wan_host=stream.exemplo.com \
  --set wan_address_mode=ddns \
@@ -54,7 +54,7 @@ sudo stremioproxywan check
 sudo stremioproxywan apply
 ~~~
 
-**O IP LAN não é necessariamente fixo:** se mudar para `192.168.1.230` e o certificado mantiver o mesmo wildcard, o nome passa a `192-168-1-230.519b6502d940.stremio.rocks`. Se o certificado mudar, o sufixo é novamente identificado. Configure `lan_host` com um hostname interno estável (DNS/DHCP) para permitir acompanhar mudanças de IP em novas reconciliações; quando usar IP literal, terá de actualizar `lan_host` se mudar. **Esta versão ainda não executa reconciliação automática em segundo plano**: é necessário correr `apply` após uma mudança de IP ou certificado. O endereço encontrado é verificado contra a CA configurada; detectar um SAN não significa confiar num certificado desconhecido.
+**IP LAN fixo por instalação:** o utilizador define `lan_host` uma única vez. Esse endereço permanece igual durante o funcionamento normal e não existe serviço periódico para detectar mudanças de IP. A descoberta automática serve para identificar e verificar o hostname HTTPS do certificado Stremio durante `discover`, `check` e `apply`. Se a administração alterar deliberadamente o IP ou o certificado, deve actualizar a configuração e executar novamente `check` e `apply`. O endereço encontrado é verificado contra a CA configurada; detectar um SAN não significa confiar num certificado desconhecido.
 
 Para certificados internos sem uma CA confiável, disponibilize primeiro uma CA de confiança em `backend_ca` ou utilize o modo manual e uma arquitectura TLS apropriada. Não desligue a verificação TLS para contornar certificados inválidos.
 
