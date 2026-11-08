@@ -12,6 +12,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from .config import CONFIG_FILE, DEFAULTS, validate, nginx_config, require_deployment_values
+from .discovery import discover_backend, DiscoveryError
 
 ROOT = Path('/etc/stremioproxywan')
 TARGET = Path('/etc/nginx/sites-available/stremioproxywan.conf')
@@ -82,6 +83,15 @@ def ensure_users():
     PASSWD.chmod(0o640)
     shutil.chown(PASSWD, user='root', group='www-data')
 
+def effective_backend(data):
+    """Resolve current LAN IP and certificate SNI; never persist discovered values."""
+    data = validate(data)
+    if data['backend_identity_mode'] == 'manual':
+        return data
+    ip, identity = discover_backend(
+        data['lan_host'], data['backend_port'], data['backend_ca'])
+    return {**data, 'backend_host': ip, 'backend_tls_name': identity}
+
 def preflight(data):
     if not CONFIG_FILE.is_file():
         raise RuntimeError('Configure WAN/LAN details before deploying')
@@ -117,7 +127,8 @@ def apply():
     ensure_secret()
     if data['wan_tls_mode']=='selfsigned':
         generate_selfsigned(data)
-    generated=nginx_config(data)
+    resolved=effective_backend(data)
+    generated=nginx_config(resolved)
     old=TARGET.read_bytes() if TARGET.exists() else None
     old_link=LINK.is_symlink()
     previous=backup()
@@ -189,6 +200,7 @@ def main(argv=None):
     cfg.add_argument('--set',action='append',required=True,metavar='KEY=VALUE')
     sub.add_parser('show')
     sub.add_parser('check')
+    sub.add_parser('discover', help='resolve current Stremio LAN address and verify its HTTPS certificate')
     sub.add_parser('apply')
     user=sub.add_parser('user')
     user.add_argument('action',choices=('add','password','remove','list'))
@@ -212,7 +224,16 @@ def main(argv=None):
         elif args.cmd=='check':
             d=load()
             preflight(d)
-            print('Configuration parameters validated; nginx validation occurs during apply')
+            resolved=effective_backend(d)
+            print('Stremio LAN endpoint:', resolved['backend_host'])
+            print('Verified backend HTTPS identity:', resolved['backend_tls_name'] if d['backend_scheme']=='https' else 'not applicable')
+            print('Configuration parameters and backend identity validated; nginx -t occurs during apply')
+        elif args.cmd=='discover':
+            d=load()
+            require_deployment_values(d)
+            resolved=effective_backend(d)
+            print('Stremio LAN endpoint:', resolved['backend_host'])
+            print('Verified backend HTTPS identity:', resolved['backend_tls_name'])
         elif args.cmd=='apply':
             apply()
         elif args.cmd=='user':
@@ -226,7 +247,7 @@ def main(argv=None):
                 if not args.username:
                     parser.error('username required')
                 update_user(args.action,args.username)
-    except (ValueError,RuntimeError,OSError) as exc:
+    except (ValueError,RuntimeError,OSError,DiscoveryError) as exc:
         raise SystemExit(f'ERROR: {exc}') from exc
 
 if __name__=='__main__':
