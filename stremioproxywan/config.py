@@ -85,6 +85,17 @@ map "$uri|$args" $stremio_hls_media_args {{
  ssl_certificate {d['wan_cert']};
  ssl_certificate_key {d['wan_key']};
  ssl_protocols TLSv1.2 TLSv1.3;
+ # Shared activation link: single bearer secret, no URL access logging.
+ location ~ ^/activate/[A-Za-z0-9_-]{{43}}$ {{
+  auth_basic off;
+  access_log off;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header Cache-Control "no-store" always;
+  proxy_pass http://127.0.0.1:18765;
+  proxy_set_header Authorization "";
+  proxy_set_header Cookie "";
+  proxy_set_header X-Authenticated-User "";
+ }}
  location = /login {{ return 302 /_session/start; }}
  location = /_session/start {{
   auth_basic "Stremio - acesso restrito";
