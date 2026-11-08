@@ -1,6 +1,6 @@
 # StremioProxyWAN
 
-**Distribuição genérica v0.1.2** para Debian/Ubuntu. Nginx reverse proxy para Stremio WebPlayer, com autenticação WAN, sessão assinada para HLS e domínios/IP WAN e LAN totalmente configuráveis.
+**Distribuição genérica v0.1.3** para Debian/Ubuntu. Nginx reverse proxy para Stremio WebPlayer, com autenticação WAN, sessão assinada para HLS e domínios/IP WAN e LAN totalmente configuráveis.
 
 ## Arquitectura
 
@@ -65,6 +65,18 @@ Numa instalação nova, o Core pode arrancar temporariamente com um certificado 
 Em redes internas isoladas onde o Core não obtém um certificado validável, existe uma alternativa **explícita**, sem downgrade silencioso: configurar backend_identity_mode=manual, backend_scheme=http, backend_host=IP_LAN_STREMIO e backend_port=8080. O browser WAN continua em HTTPS, mas o tráfego Proxy→Stremio fica em HTTP na LAN; use apenas em rede confiável. Este caminho necessita de validação funcional própria.
 
 O certificado wildcard partilhado do Stremio pode ter chave privada comum a diferentes instalações. Um certificado com cadeia pública válida não implica uma identidade criptográfica exclusiva do servidor. Para cenários com fronteiras de segurança estritas, preferir certificado privado controlado pelo operador, emitido por CA confiável.
+
+## HTTPS público com porta 80 fechada
+
+O release 0.1.3 inclui o mecanismo de renovação Let’s Encrypt **TLS-ALPN-01** através de TCP/443. Não requer TCP/80. O nome WAN tem de resolver para o endereço público cujo NAT encaminha TCP/443 para o ProxyWAN, e esse encaminhamento não pode interferir com o desafio ACME.
+
+Para efectuar a emissão inicial, instale `lego`, faça backup de `/etc/stremioproxywan`, pare temporariamente o Nginx, execute `lego --path /etc/stremioproxywan/lego --accept-tos --email CONTACTO_REAL --domains NOME_WAN --tls run` e arranque novamente o Nginx, mesmo se houver erro. O contacto deverá ser autorizado pelo operador. Instale o certificado e a cadeia pública (ficheiro .crt e .issuer.crt) e a chave privada de modo 0600 na localização WAN configurada. Alterar `wan_tls_mode=trusted`, executar `check` e `apply` e confirmar `curl` HTTPS sem `-k`.
+
+Para a renovação: guardar o contacto aprovado em `/etc/stremioproxywan/acme-email` com modo 0600 e activar `stremioproxywan-cert-renew.timer`. O timer apenas interrompe Nginx quando o certificado tiver menos de 30 dias de validade. Durante a emissão TLS-ALPN-01 existe uma breve interrupção HTTPS; o serviço volta a arrancar mesmo após falha. Backup seguro de contas ACME/chaves é obrigatório.
+
+A configuração `http_policy=disabled` exige remover o site default do Nginx que possa escutar na porta 80. Confirmar com `ss -lntp`. O caminho legado `/login` redirecciona para `/_session/start`; a autenticação WAN é via utilizadores `htpasswd` e sessão assinada.
+
+**Diagnóstico:** um 401 com `WWW-Authenticate: Basic` confirma exigência de login, não erro no backend. Mensagens `password mismatch` indicam credencial incorrecta; use `sudo stremioproxywan user password admin` para a alterar, sem a colocar na linha de comandos. O pacote 0.1.3 preserva `config.json`, `users.htpasswd` e `session.key` existentes.
 
 ## WAN com IP dinâmico (DDNS)
 
