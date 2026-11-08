@@ -89,7 +89,7 @@ def ensure_shared_link():
         token = secrets.token_urlsafe(32)
         fd = os.open(SHARED_LINK, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640)
         with os.fdopen(fd, 'w', encoding='ascii') as handle:
-            handle.write(token + '\\n')
+            handle.write(token + '\n')
     content = SHARED_LINK.read_text(encoding='ascii').strip()
     if len(content) != 43 or not re.fullmatch(r'[A-Za-z0-9_-]{43}', content):
         raise RuntimeError('Invalid shared link secret')
