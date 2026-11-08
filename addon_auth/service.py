@@ -143,7 +143,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
     def do_POST(self):
-        if self.path != "/pair":
+        if self.path not in ("/pair", "/core-link"):
             return self.reply(404)
         # Nginx must authenticate browser cookie before forwarding this route.
         if self.headers.get("X-ProxyWAN-Authenticated") != "verified":
@@ -161,12 +161,33 @@ class Handler(http.server.BaseHTTPRequestHandler):
             token = grant(account)
             if not token:
                 return self.reply(403, {"error": "account not authorized", "accountId": account})
+            if self.path == "/core-link":
+                return self.reply(200, {"serverUrl": f"https://{HOSTNAME}/_core/{token}/", "accountId": account})
             return self.reply(200, {"manifestUrl": f"https://{HOSTNAME}/_addon/{token}/manifest.json", "accountId": account})
         except (ValueError, KeyError, urllib.error.URLError, TimeoutError, json.JSONDecodeError):
             return self.reply(401, {"error": "Stremio account could not be verified"})
     def do_GET(self):
+        if self.path == "/check-core":
+            capability = self.headers.get("X-Core-Capability", "")
+            return self.reply(204 if verify(capability) else 401)
         if self.path == "/configure":
-            html = """<!doctype html><html lang="pt"><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>StremioProxyWAN Account</title><body><h1>Associar conta Stremio</h1><p>Inicie sessão no WebPlayer deste domínio, depois use esta página. Apenas contas autorizadas podem associar o addon.</p><button id="pair">Associar conta actual</button><p id="msg"></p><script>
+            html = """<!doctype html><html lang="pt"><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>StremioProxyWAN Account</title><body><h1>Associar conta Stremio</h1><p>Inicie sessão no WebPlayer deste domínio, depois use esta página. Apenas contas autorizadas podem associar o addon.</p><button id="pair">Associar conta actual</button><button id="corelink">Gerar endereco experimental de servidor</button><p id="msg"></p><script>
+document.getElementById('corelink').onclick=async()=>{
+ const msg=document.getElementById('msg');
+ try {
+   const profile=JSON.parse(localStorage.getItem('profile')||'null');
+   const key=profile&&profile.auth&&(profile.auth.key||profile.auth.authKey);
+   if(!key)throw Error('Inicie sessao no Stremio WebPlayer neste dominio.');
+   const r=await fetch('/_addon/core-link',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({authKey:key})});
+   const x=await r.json();
+   if(!r.ok)throw Error('Conta sem autorizacao ('+r.status+').');
+   const label=document.createElement('p');
+   label.textContent='TESTE RESTRITO: configure este endereço em Streaming Server. Apenas /settings, /network-info, /device-info e /casting sao permitidos. Nao e um endereco de reproducao.';
+   const url=document.createElement('input');url.type='text';url.readOnly=true;url.value=x.serverUrl;url.style.width='95%';
+   const copy=document.createElement('button');copy.textContent='Copiar endereço de teste';copy.onclick=()=>navigator.clipboard.writeText(url.value);
+   msg.replaceChildren(label,url,copy);
+ } catch(e) {msg.textContent=e.message;}
+};
 document.getElementById('pair').onclick=async()=>{
  const msg=document.getElementById('msg');
  try {

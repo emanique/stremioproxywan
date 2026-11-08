@@ -43,6 +43,15 @@ class AccountAddonTests(unittest.TestCase):
         self.assertNotIn('Access-Control-Allow-Origin "*"', pairing)
         self.assertIn('auth_request /_session/check', pairing)
 
+    def test_core_pilot_scoped_to_authenticated_handshake(self):
+        conf = nginx_config(DEFAULTS)
+        self.assertIn('location = /_core/check', conf)
+        self.assertIn('auth_request /_core/check', conf)
+        self.assertIn('settings|device-info|network-info|casting', conf)
+        self.assertNotIn('downloader/getAll|', conf)
+        self.assertIn('proxy_set_header X-Core-Capability $core_cap', conf)
+        self.assertIn('access_log off', conf.split('location ~ "^/_core/')[1].split('location = /login')[0])
+
     def test_manifest_protocol(self):
         item = service.manifest()
         self.assertEqual(item["resources"][0], "catalog")

@@ -104,6 +104,16 @@ map "$uri|$args" $stremio_hls_media_args {{
   proxy_set_header Cookie "";
   proxy_set_header Authorization "";
  }}
+ location = /_addon/core-link {{
+  auth_basic off;
+  auth_request /_session/check;
+  client_max_body_size 8k;
+  access_log off;
+  proxy_pass http://127.0.0.1:18766/core-link;
+  proxy_set_header X-ProxyWAN-Authenticated verified;
+  proxy_set_header Authorization "";
+  proxy_set_header Cookie "";
+ }}
  location = /_addon/pair {{
   auth_basic off;
   auth_request /_session/check;
@@ -127,6 +137,36 @@ map "$uri|$args" $stremio_hls_media_args {{
   rewrite ^/_addon/(.*)$ /$1 break;
   proxy_set_header Cookie "";
   proxy_set_header Authorization "";
+ }}
+ # Core handshake pilot. Requests remain credentialed and only read-only informational
+ # routes are exposed: no torrent control, library operations or media fetch.
+ location = /_core/check {{
+  internal;
+  proxy_pass http://127.0.0.1:18766/check-core;
+  proxy_pass_request_body off;
+  proxy_set_header Content-Length "";
+  proxy_set_header X-Core-Capability $core_cap;
+  proxy_set_header Authorization "";
+  proxy_set_header Cookie "";
+ }}
+ location ~ "^/_core/(?<core_cap>[A-Za-z0-9_-]{{43}})/(?<core_endpoint>settings|device-info|network-info|casting)$" {{
+  auth_basic off;
+  access_log off;
+  auth_request /_core/check;
+  add_header Access-Control-Allow-Origin "*" always;
+  add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
+  add_header Access-Control-Allow-Headers "Content-Type, Range" always;
+  add_header Cache-Control "no-store" always;
+  if ($request_method = OPTIONS) {{ return 204; }}
+  limit_except GET {{ deny all; }}
+  rewrite ^ /$core_endpoint break;
+  proxy_pass {d['backend_scheme']}://{b}:{d['backend_port']};
+{tls}  proxy_set_header Host {d['backend_tls_name'] if d['backend_scheme']=='https' else b};
+  proxy_set_header X-Forwarded-Proto https;
+  proxy_set_header X-Forwarded-Host $host;
+  proxy_set_header Authorization "";
+  proxy_set_header Cookie "";
+  proxy_read_timeout 15s;
  }}
  location = /login {{ return 302 /_session/start; }}
  location = /_session/start {{

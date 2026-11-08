@@ -231,3 +231,23 @@ new catalog resource; no token rotation is required.
 ### Stremio Windows meta resolution (0.1.8)
 
 The manifest declares idPrefixes = ["proxywan:"] globally and explicitly for both meta and stream resources. Clients can select this addon for the diagnostic catalog item proxywan:connection. No Core authentication or video stream access is changed. Existing private manifest URLs remain valid. Refresh addon metadata if the client has cached manifest 0.2.0.
+
+### Core authenticated handshake pilot (v0.1.9)
+
+An installed private addon capability can authenticate an **isolated**
+Core handshake URL prefix: https://WAN/_core/CAPABILITY/settings,
+/network-info, /device-info and /casting. Nginx issues an internal
+auth_request to the loopback addon service. Only GET is forwarded; all
+other Core endpoints remain covered by their previous session/Basic
+authentication. All capability-bearing request paths are excluded from
+Nginx access logging. This tests whether the native client keeps a URL
+prefix when configured as a streaming server: it does not prove that it
+will do so. The existing manifest remains valid and is not rotated.
+Never send the capability-bearing URL in support logs or screenshots.
+
+The authenticated browser configuration page can now generate a separate
+experimental Core URL via POST /_addon/core-link. This generates another
+revocable capability for the validated account; it does NOT change the
+installed addon manifest. Only the four read-only handshake endpoints
+are authorized. Do not use it for playback or expect arbitrary Core
+requests to succeed. This is strictly an interoperability probe.
