@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily expiry check for StremioProxyWAN certificate
+
+[Timer]
+OnCalendar=*-*-* 04:12:00
+Persistent=true
+RandomizedDelaySec=30m
+Unit=stremioproxywan-cert-renew.service
+
+[Install]
+WantedBy=timers.target
