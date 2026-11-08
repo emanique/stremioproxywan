@@ -23,9 +23,8 @@ sudo stremioproxywan configure \
  --set lan_http_port=8080 \
  --set lan_core_port=11470 \
  --set backend_scheme=https \
- --set backend_host=stremio-interno.exemplo.net \
  --set backend_port=12470 \
- --set backend_tls_name=stremio-interno.exemplo.net \
+ --set backend_identity_mode=stremio_auto \
  --set wan_tls_mode=selfsigned \
  --set http_policy=disabled
 sudo stremioproxywan user add admin
