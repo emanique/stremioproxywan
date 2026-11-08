@@ -1,0 +1,10 @@
+*.key
+*.pem
+*.p12
+*.pfx
+.htpasswd
+.stremio-users
+.stremio-session-key
+.env
+*.bak*
+__pycache__/
