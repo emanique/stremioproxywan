@@ -13,6 +13,7 @@ KEY_FILE = os.environ.get('STREMIOPROXYWAN_KEY_FILE', '/etc/stremioproxywan/sess
 SECRET = open(KEY_FILE, 'rb').read().strip()
 TTL = 12 * 3600
 NAME = 'stremio_proxy_session'
+LINK_FILE = os.environ.get('STREMIOPROXYWAN_SHARED_LINK_FILE', '/etc/stremioproxywan/shared-link.token')
 
 def encode(data):
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode('ascii')
@@ -35,7 +36,28 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-Length', '0')
         self.end_headers()
 
+    def issue_session(self, user):
+        payload = encode(json.dumps({'u': user, 'exp': int(time.time()) + TTL}, separators=(',', ':')).encode())
+        token = payload + '.' + signature(payload)
+        return self.reply(302, {
+            'Set-Cookie': f'{NAME}={token}; Path=/; Max-Age={TTL}; Secure; HttpOnly; SameSite=Lax',
+            'Location': '/', 'Referrer-Policy': 'no-referrer',
+        })
+
     def do_GET(self):
+        if self.path.startswith('/activate/'):
+            candidate = self.path[len('/activate/'):]
+            if len(candidate) != 43 or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for c in candidate):
+                return self.reply(404)
+            try:
+                with open(LINK_FILE, 'r', encoding='ascii') as handle:
+                    expected = handle.read().strip()
+            except (OSError, UnicodeError):
+                return self.reply(503)
+            if not hmac.compare_digest(candidate, expected):
+                return self.reply(404)
+            return self.issue_session('shared-link')
+
         if self.path == '/check':
             try:
                 cookies = SimpleCookie()
@@ -52,9 +74,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             user = self.headers.get('X-Authenticated-User', '')
             if not user or len(user) > 128:
                 return self.reply(403)
-            payload = encode(json.dumps({'u': user, 'exp': int(time.time()) + TTL}, separators=(',', ':')).encode())
-            token = payload + '.' + signature(payload)
-            return self.reply(302, {'Set-Cookie': f'{NAME}={token}; Path=/; Max-Age={TTL}; Secure; HttpOnly; SameSite=Lax', 'Location': '/'})
+            return self.issue_session(user)
         return self.reply(404)
 
 if __name__ == '__main__':
