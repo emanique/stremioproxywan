@@ -1,4 +1,4 @@
-# Release candidate v0.1.0 — distribuição genérica
+# Release candidate v0.1.1 — distribuição genérica
 
 Primeira distribuição parametrizável para Debian e Ubuntu.
 
@@ -24,3 +24,11 @@ Primeira distribuição parametrizável para Debian e Ubuntu.
 ## Qualificação
 
 A parametrização, o teste nginx -t em configuração de ensaio, a construção .deb/tar.gz e checksums foram executados localmente. Instalação/rollback num host limpo e testes funcionais com WAN real, diversos certificados e vários browsers continuam pendentes. Uma tag estável deve identificar uma revisão integral e verificável do repositório; não criar uma tag de produção se a paridade com os artefactos não tiver sido confirmada.
+
+## Adições v0.1.1
+
+- Descoberta do IP LAN e do hostname HTTPS correspondente ao certificado apresentado pelo Stremio.
+- Geração do nome a partir de octetos do IP separados por hífen e do wildcard SAN do certificado.
+- Validação da identidade e da cadeia TLS com CA configurada, sem desligar a verificação.
+- Reavaliação no comando discover, check e apply; sem reconciliação periódica em background.
+- Testes de mudança de IP, domínio do certificado e rejeição de certificado inválido.
