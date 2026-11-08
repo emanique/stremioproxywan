@@ -22,6 +22,7 @@ TARGET = Path('/etc/nginx/sites-available/stremioproxywan.conf')
 LINK = Path('/etc/nginx/sites-enabled/stremioproxywan.conf')
 KEY = ROOT / 'session.key'
 PASSWD = ROOT / 'users.htpasswd'
+SHARED_LINK = ROOT / 'shared-link.token'
 UNIT = Path('/etc/systemd/system/stremioproxywan-session.service')
 
 def run(args, **kw):
@@ -80,6 +81,28 @@ def ensure_secret():
     KEY.chmod(0o640)
     shutil.chown(KEY, user='root', group='www-data')
 
+def ensure_shared_link():
+    """Create a single persistent 256-bit URL-safe bearer secret on first apply."""
+    if SHARED_LINK.is_symlink():
+        raise RuntimeError('Shared link must not be a symlink')
+    if not SHARED_LINK.exists():
+        token = secrets.token_urlsafe(32)
+        fd = os.open(SHARED_LINK, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640)
+        with os.fdopen(fd, 'w', encoding='ascii') as handle:
+            handle.write(token + '\\n')
+    content = SHARED_LINK.read_text(encoding='ascii').strip()
+    if len(content) != 43 or not re.fullmatch(r'[A-Za-z0-9_-]{43}', content):
+        raise RuntimeError('Invalid shared link secret')
+    SHARED_LINK.chmod(0o640)
+    shutil.chown(SHARED_LINK, user='root', group='www-data')
+    return content
+
+def shared_link_url():
+    root_only()
+    token = ensure_shared_link()
+    d = load()
+    return f"https://{d['wan_host']}" + (f":{d['wan_port']}" if d['wan_port'] != 443 else '') + f"/activate/{token}"
+
 def ensure_users():
     if not PASSWD.exists() or PASSWD.stat().st_size == 0:
         raise RuntimeError('No WAN user found. Run: sudo stremioproxywan user add USERNAME')
@@ -128,6 +151,7 @@ def apply():
     permissions()
     ensure_users()
     ensure_secret()
+    ensure_shared_link()
     if data['wan_tls_mode']=='selfsigned':
         generate_selfsigned(data)
     resolved=effective_backend(data)
@@ -151,7 +175,7 @@ def apply():
             if not old_link:
                 LINK.unlink(missing_ok=True)
         raise RuntimeError('nginx -t failed; configuration restored; no reload') from exc
-    UNIT.write_text('''[Unit]\nDescription=StremioProxyWAN session issuer\nAfter=network.target\n[Service]\nType=simple\nUser=www-data\nGroup=www-data\nEnvironment=STREMIOPROXYWAN_KEY_FILE=/etc/stremioproxywan/session.key\nExecStart=/usr/bin/python3 /usr/lib/stremioproxywan/stremioproxywan/session.py\nRestart=on-failure\nRestartSec=3\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nProtectHome=true\nReadOnlyPaths=/etc/stremioproxywan/session.key\nRestrictAddressFamilies=AF_INET AF_UNIX\n[Install]\nWantedBy=multi-user.target\n''')
+    UNIT.write_text('''[Unit]\nDescription=StremioProxyWAN session issuer\nAfter=network.target\n[Service]\nType=simple\nUser=www-data\nGroup=www-data\nEnvironment=STREMIOPROXYWAN_KEY_FILE=/etc/stremioproxywan/session.key\nEnvironment=STREMIOPROXYWAN_SHARED_LINK_FILE=/etc/stremioproxywan/shared-link.token\nExecStart=/usr/bin/python3 /usr/lib/stremioproxywan/stremioproxywan/session.py\nRestart=on-failure\nRestartSec=3\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nProtectHome=true\nReadOnlyPaths=/etc/stremioproxywan/session.key /etc/stremioproxywan/shared-link.token\nRestrictAddressFamilies=AF_INET AF_UNIX\n[Install]\nWantedBy=multi-user.target\n''')
     try:
         run(['systemctl','daemon-reload'])
         run(['systemctl','enable','--now','stremioproxywan-session.service'])
@@ -205,6 +229,8 @@ def main(argv=None):
     sub.add_parser('check')
     sub.add_parser('discover', help='resolve current Stremio LAN address and verify its HTTPS certificate')
     sub.add_parser('apply')
+    link = sub.add_parser('link', help='show shared activation URL (root only)')
+    link.add_argument('action', choices=('show',))
     user=sub.add_parser('user')
     user.add_argument('action',choices=('add','password','remove','list'))
     user.add_argument('username',nargs='?')
@@ -239,6 +265,8 @@ def main(argv=None):
             print('Verified backend HTTPS identity:', resolved['backend_tls_name'])
         elif args.cmd=='apply':
             apply()
+        elif args.cmd=='link':
+            print(shared_link_url())
         elif args.cmd=='user':
             root_only()
             if args.action=='list':
