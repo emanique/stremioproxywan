@@ -158,8 +158,11 @@ document.getElementById('pair').onclick=async()=>{
    const x=await r.json();
    if(!r.ok)throw Error('Conta '+(x.accountId||'desconhecida')+' não autorizada ou sessão inválida ('+r.status+').'); const a=document.createElement('a');
    a.href=x.manifestUrl.replace('https://','stremio://');
-   a.textContent='Instalar addon privado no Stremio';
-   msg.replaceChildren(a);
+   a.textContent='Instalar na aplicação Stremio';
+   const p=document.createElement('p'); p.textContent='Se a aplicação não abrir correctamente, copie o endereço HTTPS do manifesto e cole-o em Addons > Add addon:';
+   const url=document.createElement('input'); url.type='text';url.readOnly=true;url.value=x.manifestUrl;url.style.width='95%';
+   const copy=document.createElement('button');copy.textContent='Copiar endereço HTTPS';copy.onclick=()=>navigator.clipboard.writeText(url.value);
+   msg.replaceChildren(a,p,url,copy);
  }catch(e){msg.textContent=e.message}
 };
 </script></body></html>"""

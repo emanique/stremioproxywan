@@ -194,3 +194,13 @@ Account pairing requires a browser with a Stremio WebPlayer session saved
 under this exact HTTPS origin. The `authKey` is verified by `api.strem.io`
 and is not recorded by this server. Approve an account only after confirming
 the identifier through an independent channel.
+
+### Stremio addon CORS and installation (v0.1.5)
+
+Addon manifests and catalog endpoints on `/_addon/<capability>/...` return
+`Access-Control-Allow-Origin: *`, which the Stremio addon HTTP transport
+requires. This is restricted to capability-protected addon resources, not
+the ProxyWAN Core, the `/_addon/pair` route, or the authenticated
+`/_addon/configure` page. An install `stremio://` deep link may not be
+handled consistently by every desktop client; the configure page also
+provides the HTTPS manifest URL for manual installation in Addons.

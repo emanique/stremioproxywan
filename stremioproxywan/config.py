@@ -117,6 +117,12 @@ map "$uri|$args" $stremio_hls_media_args {{
  location ~ "^/_addon/[A-Za-z0-9_-]{{43}}/(manifest\\.json|catalog/movie/proxywan-account\\.json)$" {{
   auth_basic off;
   access_log off;
+  # Per Stremio addon HTTP protocol: CORS is mandatory on public manifest/resources.
+  add_header Access-Control-Allow-Origin "*" always;
+  add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
+  add_header Access-Control-Allow-Headers "Content-Type" always;
+  add_header X-Content-Type-Options nosniff always;
+  if ($request_method = OPTIONS) {{ return 204; }}
   proxy_pass http://127.0.0.1:18766;
   rewrite ^/_addon/(.*)$ /$1 break;
   proxy_set_header Cookie "";

@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 from addon_auth import service
+from stremioproxywan.config import nginx_config, DEFAULTS
 
 class AccountAddonTests(unittest.TestCase):
     def setUp(self):
@@ -32,6 +33,15 @@ class AccountAddonTests(unittest.TestCase):
     def test_unknown_bad_account(self):
         with self.assertRaises(ValueError):
             service.authorize_account("../../etc/passwd")
+
+    def test_addon_cors_only_public_resource_routes(self):
+        conf = nginx_config(DEFAULTS)
+        resource_location = conf.split('location ~ "^/_addon/')[1].split('location = /login')[0]
+        self.assertIn('Access-Control-Allow-Origin "*"', resource_location)
+        self.assertIn('GET, HEAD, OPTIONS', resource_location)
+        pairing = conf.split('location = /_addon/pair')[1].split('location ~ "^/_addon/')[0]
+        self.assertNotIn('Access-Control-Allow-Origin "*"', pairing)
+        self.assertIn('auth_request /_session/check', pairing)
 
     def test_manifest_protocol(self):
         item = service.manifest()
