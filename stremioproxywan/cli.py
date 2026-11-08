@@ -179,6 +179,7 @@ def apply():
     try:
         run(['systemctl','daemon-reload'])
         run(['systemctl','enable','--now','stremioproxywan-session.service'])
+        run(['systemctl','enable','--now','stremioproxywan-addon.service'])
         run(['systemctl','reload','nginx'])
     except subprocess.CalledProcessError:
         if old is not None:

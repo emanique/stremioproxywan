@@ -1,0 +1,25 @@
+[Unit]
+Description=StremioProxyWAN private Stremio account addon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+Environment=PYTHONPATH=/usr/lib/stremioproxywan
+Environment=STREMIO_ADDON_STATE_DIR=/var/lib/stremioproxywan-addon
+Environment=STREMIO_ADDON_PUBLIC_HOST=str.lusosolutions.com
+ExecStart=/usr/bin/python3 -m addon_auth.service
+StateDirectory=stremioproxywan-addon
+StateDirectoryMode=0770
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_INET AF_UNIX
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

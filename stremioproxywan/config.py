@@ -96,6 +96,32 @@ map "$uri|$args" $stremio_hls_media_args {{
   proxy_set_header Cookie "";
   proxy_set_header X-Authenticated-User "";
  }}
+ # Account-bound Stremio addon: pairing requires an existing ProxyWAN browser session.
+ location = /_addon/configure {{
+  auth_basic off;
+  auth_request /_session/check;
+  proxy_pass http://127.0.0.1:18766/configure;
+  proxy_set_header Cookie "";
+  proxy_set_header Authorization "";
+ }}
+ location = /_addon/pair {{
+  auth_basic off;
+  auth_request /_session/check;
+  client_max_body_size 8k;
+  access_log off;
+  proxy_pass http://127.0.0.1:18766/pair;
+  proxy_set_header X-ProxyWAN-Authenticated verified;
+  proxy_set_header Authorization "";
+  proxy_set_header Cookie "";
+ }}
+ location ~ "^/_addon/[A-Za-z0-9_-]{{43}}/(manifest\\.json|catalog/movie/proxywan-account\\.json)$" {{
+  auth_basic off;
+  access_log off;
+  proxy_pass http://127.0.0.1:18766;
+  rewrite ^/_addon/(.*)$ /$1 break;
+  proxy_set_header Cookie "";
+  proxy_set_header Authorization "";
+ }}
  location = /login {{ return 302 /_session/start; }}
  location = /_session/start {{
   auth_basic "Stremio - acesso restrito";

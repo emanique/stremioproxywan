@@ -158,3 +158,39 @@ bash packaging/build.sh dist
 A distribuição produz o pacote .deb (architecture all), um tar.gz de código-fonte e SHA256SUMS. O pacote não inclui passwords, chaves de sessão, certificados ou dados de utilizador.
 
 Ver [Operação e rollback](docs/OPERATIONS.md) e [Notas da versão](docs/RELEASE.md).
+
+## Experimental account-bound addon (0.1.4)
+
+This addon is **not** a replacement for the native Stremio streaming-server
+authentication. The SDK cannot make the Windows client attach a Stremio
+`authKey` to `/settings`, `/device-info` or playback requests. It only
+provides a private Stremio addon manifest bound to a verified account.
+
+To use, first authenticate to the browser WebPlayer via the existing shared
+activation link, then open `https://<WAN-HOST>/_addon/configure` using the
+same browser/origin and the same signed-in Stremio account. Press **Associar
+conta actual**. If not approved, the page shows the Stremio account id.
+An operator explicitly permits that ID on the VM3 with:
+
+```bash
+sudo env PYTHONPATH=/usr/lib/stremioproxywan python3 -m addon_auth.admin allow 'STREMIO_ACCOUNT_ID'
+# revoke all existing manifests for the account:
+sudo env PYTHONPATH=/usr/lib/stremioproxywan python3 -m addon_auth.admin revoke 'STREMIO_ACCOUNT_ID'
+sudo env PYTHONPATH=/usr/lib/stremioproxywan python3 -m addon_auth.admin list
+```
+
+Revisit configure after approval to receive a private manifest URL; install
+it in the Stremio client. Anyone who possesses that URL may access the addon
+until its account is revoked, so do not share it. The service stores only
+hashed capability values and account IDs, never Stremio authKeys/passwords.
+Only the proxy's existing authenticated browser session can initiate pairing.
+The addon currently provides an empty catalog and intentionally **does not
+proxy streaming content**. The general Stremio Core remains protected by
+ProxyWAN's prior Basic/session mechanism. The addon service listens on
+127.0.0.1:18766, with account policy persisted at
+`/var/lib/stremioproxywan-addon/accounts.json`.
+
+Account pairing requires a browser with a Stremio WebPlayer session saved
+under this exact HTTPS origin. The `authKey` is verified by `api.strem.io`
+and is not recorded by this server. Approve an account only after confirming
+the identifier through an independent channel.
