@@ -11,7 +11,10 @@ trap 'rm -rf "$STAGE"' EXIT
 ROOT="$STAGE/stremioproxywan_${VERSION}_all"
 mkdir -p "$ROOT/DEBIAN" "$ROOT/usr/lib/stremioproxywan/stremioproxywan" "$ROOT/usr/bin" "$ROOT/usr/libexec" "$ROOT/lib/systemd/system" "$ROOT/usr/share/doc/stremioproxywan"
 cp stremioproxywan/*.py "$ROOT/usr/lib/stremioproxywan/stremioproxywan/"
-cp README.md "$ROOT/usr/share/doc/stremioproxywan/README.md"\ninstall -m 0755 scripts/renew-tls-alpn.sh "$ROOT/usr/libexec/stremioproxywan-renew-tls"\ninstall -m 0644 deploy/systemd/stremioproxywan-cert-renew.service "$ROOT/lib/systemd/system/"\ninstall -m 0644 deploy/systemd/stremioproxywan-cert-renew.timer "$ROOT/lib/systemd/system/"
+cp README.md "$ROOT/usr/share/doc/stremioproxywan/README.md"
+install -m 0755 scripts/renew-tls-alpn.sh "$ROOT/usr/libexec/stremioproxywan-renew-tls"
+install -m 0644 deploy/systemd/stremioproxywan-cert-renew.service "$ROOT/lib/systemd/system/"
+install -m 0644 deploy/systemd/stremioproxywan-cert-renew.timer "$ROOT/lib/systemd/system/"
 cat > "$ROOT/DEBIAN/control" <<EOF
 Package: stremioproxywan
 Version: $VERSION
