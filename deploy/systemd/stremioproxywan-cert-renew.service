@@ -1,0 +1,13 @@
+[Unit]
+Description=Renew StremioProxyWAN public HTTPS certificate using TLS-ALPN-01
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/stremioproxywan/acme-email
+ConditionPathExists=/etc/stremioproxywan/lego
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/libexec/stremioproxywan-renew-tls
+TimeoutStartSec=300
