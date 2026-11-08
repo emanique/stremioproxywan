@@ -151,10 +151,10 @@ def apply():
     permissions()
     ensure_users()
     ensure_secret()
-    ensure_shared_link()
     if data['wan_tls_mode']=='selfsigned':
         generate_selfsigned(data)
     resolved=effective_backend(data)
+    ensure_shared_link()
     generated=nginx_config(resolved)
     old=TARGET.read_bytes() if TARGET.exists() else None
     old_link=LINK.is_symlink()
