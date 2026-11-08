@@ -105,6 +105,22 @@ Modos de endereço WAN:
 - **backend HTTPS:** verifica o certificado e o SNI. Para CA privada interna, indique backend_ca. **Não desactive** proxy_ssl_verify para suportar WAN autoassinada.
 - **backend HTTP:** é possível em rede interna protegida, mas não cifra o tráfego proxy→Core.
 
+## Link fixo partilhado — WebPlayer externo (v0.1.3 QA)
+
+Na primeira aplicação da configuração, o ProxyWAN gera um segredo aleatório de 256 bits em `/etc/stremioproxywan/shared-link.token`, persistente após reboot e actualização, legível somente por root e pelo grupo www-data. O token não é publicado no GitHub, não é introduzido no ficheiro `config.json` e não aparece no access log do endpoint de activação.
+
+Obter o único link de acesso (comando executado **localmente como root**):
+
+~~~bash
+sudo stremioproxywan link show
+~~~
+
+O endereço é semelhante a `https://str.lusosolutions.com/activate/<segredo-aleatorio>`. Qualquer pessoa que possua o link pode obter uma sessão para o WebPlayer, sem credenciais Basic, durante a validade do link. Cada cliente recebe um cookie assinado e independente de 12 horas, sendo depois redireccionado para `/`. Não altera os utilizadores/password já existentes. A porta 80 continua fechada se `http_policy=disabled` e o site default do Nginx estiver desactivado.
+
+**Risco:** o link é uma credencial partilhada de tipo bearer, não uma conta individual. Evitar enviá-lo por canais públicos, fotografias e sistemas com pré-visualização automática. Não suporta nesta versão revogação por cliente nem autenticação directa da aplicação Stremio oficial. Se o endereço for comprometido, a rotação do segredo exige um procedimento administrativo; os cookies já emitidos continuam válidos até expirarem, salvo alteração da chave HMAC de sessão (que invalida todas as sessões).
+
+A rota exacta de activação devolve HTTP 302 e estabelece um cookie com Secure, HttpOnly e SameSite=Lax. Um token incorrecto devolve HTTP 404. Não guardar o URL com o token em históricos, logs de reverse proxy anteriores ou ferramentas de monitorização.
+
 ## Alterar login/password WAN
 
 ~~~bash
