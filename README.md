@@ -35,6 +35,30 @@ sudo stremioproxywan apply
 
 Os valores de exemplo não são destinos operacionais. É obrigatório configurar os endereços reais antes de aplicar. A instalação do pacote **não altera o Nginx automaticamente**.
 
+## Descoberta automática do certificado Stremio LAN
+
+O endereço HTTPS interno do Stremio tem duas partes: **IP LAN com pontos substituídos por hífen** + **sufixo DNS do certificado**. Exemplo validado em 2026-11-08:
+
+- IP LAN: `192.168.1.199`.
+- Certificado SAN: `*.519b6502d940.stremio.rocks`.
+- Endereço HTTPS resultante: `192-168-1-199.519b6502d940.stremio.rocks:12470`.
+
+Em `backend_identity_mode=stremio_auto` (predefinição), o comando `discover` resolve `lan_host`, lê o SAN do certificado apresentado pelo serviço LAN na porta `backend_port`, constrói o hostname e valida a ligação com a CA configurada. `check` e `apply` repetem a descoberta; `apply` só carrega a configuração após a validação.
+
+~~~bash
+sudo stremioproxywan configure \
+  --set lan_host=192.168.1.199 \
+  --set backend_port=12470 \
+  --set backend_identity_mode=stremio_auto
+sudo stremioproxywan discover
+sudo stremioproxywan check
+sudo stremioproxywan apply
+~~~
+
+**O IP LAN não é necessariamente fixo:** se mudar para `192.168.1.230` e o certificado mantiver o mesmo wildcard, o nome passa a `192-168-1-230.519b6502d940.stremio.rocks`. Se o certificado mudar, o sufixo é novamente identificado. Configure `lan_host` com um hostname interno estável (DNS/DHCP) para permitir acompanhar mudanças de IP em novas reconciliações; quando usar IP literal, terá de actualizar `lan_host` se mudar. **Esta versão ainda não executa reconciliação automática em segundo plano**: é necessário correr `apply` após uma mudança de IP ou certificado. O endereço encontrado é verificado contra a CA configurada; detectar um SAN não significa confiar num certificado desconhecido.
+
+Para certificados internos sem uma CA confiável, disponibilize primeiro uma CA de confiança em `backend_ca` ou utilize o modo manual e uma arquitectura TLS apropriada. Não desligue a verificação TLS para contornar certificados inválidos.
+
 ## WAN com IP dinâmico (DDNS)
 
 O modo `wan_address_mode=ddns` permite publicar o serviço através de um hostname estável, por exemplo `stream.meudominio.net`, mesmo quando o ISP altera o IP público. Configure `wan_host` com esse hostname e mantenha um actualizador DDNS no router, no serviço DNS ou num agente externo. **O Nginx não precisa de conhecer o IP WAN actual nem precisa de ser reiniciado quando esse IP muda.**
