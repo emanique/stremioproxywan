@@ -58,6 +58,14 @@ sudo stremioproxywan apply
 
 Para certificados internos sem uma CA confiável, disponibilize primeiro uma CA de confiança em `backend_ca` ou utilize o modo manual e uma arquitectura TLS apropriada. Não desligue a verificação TLS para contornar certificados inválidos.
 
+## Pré-requisito: certificado HTTPS interno Stremio
+
+Numa instalação nova, o Core pode arrancar temporariamente com um certificado autoassinado, enquanto tenta obter o wildcard público stremio.rocks. O modo stremio_auto do ProxyWAN **não ignora erros TLS**; requer certificado verificável e SAN DNS utilizável. Aguarde a emissão do certificado confiável e execute discover/check. Se utilizar uma CA privada, instale a CA no Proxy e configure backend_ca.
+
+Em redes internas isoladas onde o Core não obtém um certificado validável, existe uma alternativa **explícita**, sem downgrade silencioso: configurar backend_identity_mode=manual, backend_scheme=http, backend_host=IP_LAN_STREMIO e backend_port=8080. O browser WAN continua em HTTPS, mas o tráfego Proxy→Stremio fica em HTTP na LAN; use apenas em rede confiável. Este caminho necessita de validação funcional própria.
+
+O certificado wildcard partilhado do Stremio pode ter chave privada comum a diferentes instalações. Um certificado com cadeia pública válida não implica uma identidade criptográfica exclusiva do servidor. Para cenários com fronteiras de segurança estritas, preferir certificado privado controlado pelo operador, emitido por CA confiável.
+
 ## WAN com IP dinâmico (DDNS)
 
 O modo `wan_address_mode=ddns` permite publicar o serviço através de um hostname estável, por exemplo `stream.meudominio.net`, mesmo quando o ISP altera o IP público. Configure `wan_host` com esse hostname e mantenha um actualizador DDNS no router, no serviço DNS ou num agente externo. **O Nginx não precisa de conhecer o IP WAN actual nem precisa de ser reiniciado quando esse IP muda.**
