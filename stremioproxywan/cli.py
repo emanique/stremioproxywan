@@ -14,6 +14,9 @@ from datetime import datetime, timezone
 from .config import CONFIG_FILE, DEFAULTS, validate, nginx_config, require_deployment_values
 from .discovery import discover_backend, DiscoveryError
 
+# Ensure administrative tools in /usr/sbin are available in non-login root shells.
+os.environ['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:' + os.environ.get('PATH','')
+
 ROOT = Path('/etc/stremioproxywan')
 TARGET = Path('/etc/nginx/sites-available/stremioproxywan.conf')
 LINK = Path('/etc/nginx/sites-enabled/stremioproxywan.conf')
