@@ -26,8 +26,8 @@ class ConfigTest(unittest.TestCase):
 
     def test_shared_activation_route_is_not_logged_or_basic_authenticated(self):
         config=nginx_config({**DEFAULTS,'wan_host':'str.lusosolutions.com','http_policy':'disabled'})
-        self.assertIn('location ~ ^/activate/[A-Za-z0-9_-]{43}$ {',config)
-        activation=config.split('location ~ ^/activate/',1)[1].split('location = /login',1)[0]
+        self.assertIn('location ~ "^/activate/[A-Za-z0-9_-]{43}$" {',config)
+        activation=config.split('location ~ "^/activate/',1)[1].split('location = /login',1)[0]
         self.assertIn('auth_basic off;',activation)
         self.assertIn('access_log off;',activation)
         self.assertIn('proxy_pass http://127.0.0.1:18765;',activation)
