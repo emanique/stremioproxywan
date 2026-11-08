@@ -85,6 +85,7 @@ map "$uri|$args" $stremio_hls_media_args {{
  ssl_certificate {d['wan_cert']};
  ssl_certificate_key {d['wan_key']};
  ssl_protocols TLSv1.2 TLSv1.3;
+ location = /login {{ return 302 /_session/start; }}
  location = /_session/start {{
   auth_basic "Stremio - acesso restrito";
   auth_basic_user_file /etc/stremioproxywan/users.htpasswd;
