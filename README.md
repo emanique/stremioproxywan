@@ -204,3 +204,12 @@ the ProxyWAN Core, the `/_addon/pair` route, or the authenticated
 `/_addon/configure` page. An install `stremio://` deep link may not be
 handled consistently by every desktop client; the configure page also
 provides the HTTPS manifest URL for manual installation in Addons.
+
+### Windows installation correction (v0.1.6)
+
+The association screen now offers only the HTTPS manifest URL and explicit
+manual Addons installation instructions. It no longer opens the native
+\`stremio://\` deep link, which some Windows client builds route to a
+\`Page not found\` screen. A valid addon manifest is separate from the
+custom streaming-server address; the addon cannot authenticate that Core
+connection and never claims to do so.
