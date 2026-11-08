@@ -74,10 +74,12 @@ class AccountAddonTests(unittest.TestCase):
         ih="a"*40
         with patch.object(service, "completed_media", return_value={}):
             self.assertEqual(service.media_stream(token,ih), {"streams":[]})
-        with patch.object(service, "completed_media", return_value={ih:{"id":"proxywan:"+ih}}):
+        with patch.object(service, "completed_media", return_value={ih:{"id":"proxywan:"+ih,"name":"sample.mkv"}}):
             output=service.media_stream(token,ih)
             self.assertEqual(len(output["streams"]),1)
             self.assertTrue(output["streams"][0]["url"].endswith("/"+ih+"/-1"))
+            self.assertIs(output["streams"][0]["behaviorHints"]["notWebReady"], True)
+            self.assertEqual(output["streams"][0]["behaviorHints"]["filename"], "sample.mkv")
         conf=nginx_config(DEFAULTS)
         self.assertIn('location = /_media/check', conf)
         self.assertIn('auth_request /_media/check', conf)

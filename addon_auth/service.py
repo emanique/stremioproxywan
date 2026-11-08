@@ -149,11 +149,17 @@ def media_meta(infohash):
     return {"meta": completed_media().get(infohash, {})}
 
 def media_stream(token, infohash):
-    if infohash not in completed_media():
+    media = completed_media()
+    if infohash not in media:
         return {"streams": []}
+    filename = media[infohash]["name"]
     return {"streams": [{"name": "StremioProxyWAN - Biblioteca",
-                         "title": "Reproducao HTTPS privada",
-                         "url": f"https://{HOSTNAME}/_media/{token}/{infohash}/-1"}]}
+                         "title": "Reproducao HTTPS privada (MKV - player nativo)",
+                         "url": f"https://{HOSTNAME}/_media/{token}/{infohash}/-1",
+                         "behaviorHints": {
+                             "notWebReady": True,
+                             "filename": filename,
+                         }}]}
 
 def diagnostic_catalog():
     return {"metas": [{key: DIAGNOSTIC[key] for key in ("id", "type", "name")}]}
@@ -164,7 +170,7 @@ def diagnostic_meta():
 def manifest():
     return {
         "id": "com.lusosolutions.stremioproxywan.account",
-        "version": "0.3.0",
+        "version": "0.3.1",
         "name": "StremioProxyWAN Account",
         "description": "Authorized private catalog and streamed media; Core API remains protected",
         "resources": [

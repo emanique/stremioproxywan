@@ -263,3 +263,12 @@ internal loopback auth_request. Byte-range responses are proxied from the
 existing Stremio Core with TLS validation. The original browser session
 path and the principal Streaming Server URL remain authenticated. This is
 a narrow pilot: TV/HLS and remote native playback are not yet validated.
+
+### Native player MKV stream metadata (0.2.1)
+
+For the private MKV/HEVC media URL, stream.behaviorHints.notWebReady
+is explicitly true as required by the Stremio addon protocol for non-MP4
+HTTP(S) streams. behaviorHints.filename is populated with the original
+filename to support recognition and subtitle addons. The endpoint,
+capability, media bytes, and streaming server authentication remain
+unchanged. This does not guarantee external-player integration.
