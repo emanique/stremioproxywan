@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(cat VERSION)" = "0.2.1"
-          python3 -m unittest discover -s tests -p 'test_*.py'
+          sudo python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Build and validate Debian package and source archive
         shell: bash
         run: |
