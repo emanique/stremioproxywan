@@ -1,6 +1,8 @@
 # StremioProxyWAN
 
-**Distribuição genérica v0.1.3** para Debian/Ubuntu. Nginx reverse proxy para Stremio WebPlayer, com autenticação WAN, sessão assinada para HLS e domínios/IP WAN e LAN totalmente configuráveis.
+**Distribuição genérica v0.2.1** para Debian/Ubuntu. Nginx reverse proxy para Stremio WebPlayer, com autenticação WAN, sessão assinada para HLS e domínios/IP WAN e LAN totalmente configuráveis.
+
+**Release:** [v0.2.1 — packages e hashes](https://github.com/emanique/stremioproxywan/releases/tag/v0.2.1). A distribuição mantém o instalador `.deb` e o arquivo de origem `.tar.gz`, com `SHA256SUMS`. Os parágrafos sobre v0.1.x abaixo documentam a evolução histórica e não indicam a versão actual de instalação. A versão v0.2.1 contém os desenvolvimentos posteriores de addon privado, media endpoints autenticados e metadados para reprodução, mas não garante autenticação nativa universal da aplicação Stremio Windows.
 
 ## Arquitectura
 
@@ -14,7 +16,7 @@ O pacote não altera a VPN, o Pi-hole, o Stremio, o DNS público, o NAT nem a fi
 ## Instalação
 
 ~~~bash
-sudo apt install ./stremioproxywan_0.1.2_all.deb
+sudo apt install ./stremioproxywan_0.2.1_all.deb
 sudo stremioproxywan configure \
  --set wan_host=stream.exemplo.com \
  --set wan_address_mode=ddns \
