@@ -30,7 +30,8 @@ jobs:
           bash packaging/build.sh release-assets
           (cd release-assets && sha256sum -c SHA256SUMS)
           test "$(dpkg-deb --field release-assets/stremioproxywan_0.2.1_all.deb Version)" = "0.2.1"
-          tar -tzf release-assets/stremioproxywan-0.2.1.tar.gz | grep -q '^README.md$'
+          tar -tzf release-assets/stremioproxywan-0.2.1.tar.gz > /tmp/proxywan-release-contents.txt
+          grep -Fx 'README.md' /tmp/proxywan-release-contents.txt
       - name: Publish verified prerelease (account addon experimental)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
