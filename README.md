@@ -1,8 +1,16 @@
 # StremioProxyWAN
 
-**Distribuição genérica v0.2.1** para Debian/Ubuntu. Nginx reverse proxy para Stremio WebPlayer, com autenticação WAN, sessão assinada para HLS e domínios/IP WAN e LAN totalmente configuráveis.
+**Distribuição genérica v0.2.2 — estável para WebPlayer WAN** para Debian/Ubuntu. Nginx reverse proxy para Stremio WebPlayer, com autenticação WAN, sessão assinada para HLS e domínios/IP WAN e LAN totalmente configuráveis.
 
-**Release:** [v0.2.1 — packages e hashes](https://github.com/emanique/stremioproxywan/releases/tag/v0.2.1). A distribuição mantém o instalador `.deb` e o arquivo de origem `.tar.gz`, com `SHA256SUMS`. Os parágrafos sobre v0.1.x abaixo documentam a evolução histórica e não indicam a versão actual de instalação. A versão v0.2.1 contém os desenvolvimentos posteriores de addon privado, media endpoints autenticados e metadados para reprodução, mas não garante autenticação nativa universal da aplicação Stremio Windows.
+**Release estável:** [v0.2.2 — packages e hashes](https://github.com/emanique/stremioproxywan/releases/tag/v0.2.2). A distribuição mantém o instalador `.deb` e o arquivo de origem `.tar.gz`, com `SHA256SUMS`. Os parágrafos sobre v0.1.x abaixo documentam a evolução histórica e não indicam a versão actual de instalação. A versão v0.2.2 consolida a autenticação WAN, sessões, WebPlayer, media e descoberta automática do servidor WAN. O addon privado permanece experimental e não garante autenticação nativa universal da aplicação Stremio Windows.
+
+## Descoberta automática no WebPlayer externo (v0.2.2)
+
+No WebPlayer servido por `https://WAN_HOST/`, o Nginx intercepta **apenas** `/localStorage.json` e substitui o URL de streaming interno anunciado pelo Stremio pelo URL HTTPS do próprio ProxyWAN. A configuração pública é calculada a partir de `wan_host`, `wan_port`, `backend_tls_name` e `backend_port`: não está fixada a um IP ou domínio de uma instalação concreta.
+
+A rota mantém obrigatórias a autenticação Basic **ou** sessão assinada, a verificação TLS do backend, e aplica `Cache-Control: private, no-store`. Não cria uma API pública anónima. O URL registado no navegador externo passa a `https://WAN_HOST/`; o WebPlayer LAN continua a anunciar o endereço LAN do seu próprio servidor. Browser profiles anteriores poderão precisar de actualizar a página para receber a nova origem.
+
+**Fronteira de suporte:** isto inicializa o *WebPlayer* no domínio WAN. Não insere automaticamente o URL na lista privada da aplicação Windows/TV instalada, nem transforma o addon privado num método universal de autorização do Core. As funcionalidades de addon de conta e emparelhamento continuam experimentais. O cenário HTTP manual do backend requer validação própria.
 
 ## Arquitectura
 
@@ -16,7 +24,7 @@ O pacote não altera a VPN, o Pi-hole, o Stremio, o DNS público, o NAT nem a fi
 ## Instalação
 
 ~~~bash
-sudo apt install ./stremioproxywan_0.2.1_all.deb
+sudo apt install ./stremioproxywan_0.2.2_all.deb
 sudo stremioproxywan configure \
  --set wan_host=stream.exemplo.com \
  --set wan_address_mode=ddns \
@@ -211,8 +219,8 @@ provides the HTTPS manifest URL for manual installation in Addons.
 
 The association screen now offers only the HTTPS manifest URL and explicit
 manual Addons installation instructions. It no longer opens the native
-\`stremio://\` deep link, which some Windows client builds route to a
-\`Page not found\` screen. A valid addon manifest is separate from the
+`stremio://` deep link, which some Windows client builds route to a
+`Page not found` screen. A valid addon manifest is separate from the
 custom streaming-server address; the addon cannot authenticate that Core
 connection and never claims to do so.
 

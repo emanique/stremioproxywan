@@ -198,6 +198,26 @@ map "$uri|$args" $stremio_hls_media_args {{
   proxy_set_header Cookie "";
   proxy_read_timeout 15s;
  }}
+ # Stremio WebPlayer's loader seeds its streaming-server list from this
+ # resource. Rewrite ONLY the backend's seeded URL for this authenticated
+ # WAN origin: otherwise the remote browser selects an unreachable RFC1918
+ # endpoint even though playback through the proxy is available.
+ location = /localStorage.json {{
+  satisfy any;
+  auth_basic "Stremio - acesso restrito";
+  auth_basic_user_file /etc/stremioproxywan/users.htpasswd;
+  auth_request /_session/check;
+  proxy_pass {d['backend_scheme']}://{b}:{d['backend_port']};
+{tls}  proxy_set_header Host {d['backend_tls_name'] if d['backend_scheme']=='https' else b};
+  proxy_set_header Authorization $stremio_backend_authorization;
+  proxy_set_header Accept-Encoding "";
+  proxy_hide_header ETag;
+  proxy_hide_header Last-Modified;
+  sub_filter_types application/json;
+  sub_filter_once off;
+  sub_filter 'https://{d['backend_tls_name']}:{d['backend_port']}/' 'https://{w}{(':'+str(d['wan_port'])) if d['wan_port']!=443 else ''}/';
+  add_header Cache-Control "private, no-store" always;
+ }}
  location = /login {{ return 302 /_session/start; }}
  location = /_session/start {{
   auth_basic "Stremio - acesso restrito";
