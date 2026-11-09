@@ -1,0 +1,47 @@
+name: Publish StremioProxyWAN v0.2.1
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/release-v0.2.1.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: publish-proxywan-v0.2.1
+  cancel-in-progress: false
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify current version and run isolated unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION)" = "0.2.1"
+          python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Build and validate Debian package and source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash packaging/build.sh release-assets
+          (cd release-assets && sha256sum -c SHA256SUMS)
+          test "$(dpkg-deb --field release-assets/stremioproxywan_0.2.1_all.deb Version)" = "0.2.1"
+          tar -tzf release-assets/stremioproxywan-0.2.1.tar.gz | grep -q '^README.md$'
+      - name: Publish verified prerelease (account addon experimental)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release-assets
+          if gh release view v0.2.1 >/dev/null 2>&1; then
+            gh release upload v0.2.1 stremioproxywan_0.2.1_all.deb stremioproxywan-0.2.1.tar.gz SHA256SUMS --clobber
+          else
+            gh release create v0.2.1 stremioproxywan_0.2.1_all.deb stremioproxywan-0.2.1.tar.gz SHA256SUMS --target "$GITHUB_SHA" --title 'StremioProxyWAN v0.2.1 — experimental account addon' --prerelease --notes 'ProxyWAN v0.2.1 source and Debian packages. Private account-bound addon and authenticated Core media paths remain experimental; not a guarantee of native Stremio Windows client authentication. Use configure/check/apply and back up existing host configuration before upgrading. Unit tests, package version and SHA-256 verified.'
+          fi
+          gh release view v0.2.1 --json tagName,isPrerelease,assets,url
